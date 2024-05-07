@@ -189,28 +189,9 @@ where
         T: QueryFragment<DB> + QueryId,
         F: FnOnce(&str, PrepareForCache) -> QueryResult<Statement>,
     {
-        use std::collections::hash_map::Entry::{Occupied, Vacant};
-
         let cache_key = StatementCacheKey::for_source(source, bind_types, backend)?;
-
-        if !source.is_safe_to_cache_prepared(backend)? {
-            let sql = cache_key.sql(source, backend)?;
-            return prepare_fn(&sql, PrepareForCache::No).map(MaybeCached::CannotCache);
-        }
-
-        let cached_result = match self.cache.entry(cache_key) {
-            Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => {
-                let statement = {
-                    let sql = entry.key().sql(source, backend)?;
-                    prepare_fn(&sql, PrepareForCache::Yes)
-                };
-
-                entry.insert(statement?)
-            }
-        };
-
-        Ok(MaybeCached::Cached(cached_result))
+        let sql = cache_key.sql(source, backend)?;
+        return prepare_fn(&sql, PrepareForCache::No).map(MaybeCached::CannotCache);
     }
 }
 
